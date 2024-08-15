@@ -6,7 +6,7 @@ A voice-activated assistant module for MagicMirror² using Porcupine for wake wo
 
 - Wake word detection using Porcupine
 - Speech-to-text using OpenAI's Whisper API
-- Natural language processing using GPT-3.5-turbo
+- Natural language processing using GPT-4o-mini
 - Text-to-speech using OpenAI's TTS API
 - Conversation mode for continuous interaction
 - Standby mode for power efficiency and privacy
