@@ -32,7 +32,7 @@ Before installing this module, make sure you have the following:
 
 2. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/MMM-VoiceCompanion.git
+   git clone https://github.com/LeonardSEO/MMM-VoiceCompanion.git
    ```
 
 3. Change to the newly created module directory:
