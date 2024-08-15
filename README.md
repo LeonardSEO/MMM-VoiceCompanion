@@ -29,7 +29,7 @@ Before installing this module, make sure you have the following:
 
 2. Clone this repository:
     ```bash
-    git clone https://github.com/yourusername/MMM-VoiceCompanion.git
+    git clone https://github.com/LeonardSEO/MMM-VoiceCompanion.git
     ```
 
 3. Change to the newly created module directory:
@@ -99,41 +99,4 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ## License
 
-MIT
-
-## GitHub Instructions
-
-1. Create a new repository on GitHub named "MMM-VoiceCompanion".
-2. Initialize the repository in your local MMM-VoiceCompanion folder:
-    ```bash
-    git init
-    git add .
-    git commit -m "Initial commit"
-    git branch -M main
-    git remote add origin https://github.com/yourusername/MMM-VoiceCompanion.git
-    git push -u origin main
-    ```
-
-3. Create a `.gitignore` file in the module folder with the following content:
-    ```
-    node_modules/
-    .DS_Store
-    ```
-
-4. Commit and push the `.gitignore` file:
-    ```bash
-    git add .gitignore
-    git commit -m "Add .gitignore"
-    git push
-    ```
-
-5. Update the README.md with any additional information or screenshots as your module develops.
-
-6. Whenever you make changes, commit and push them to GitHub:
-    ```bash
-    git add .
-    git commit -m "Description of changes"
-    git push
-    ```
-
-This comprehensive guide should help users of all skill levels install and use your MMM-VoiceCompanion module. The documentation provides clear steps, explains prerequisites, and offers troubleshooting tips. As you develop the module further, remember to keep the documentation up-to-date and add screenshots to illustrate the module's functionality.
+[MIT](https://github.com/LeonardSEO/MMM-VoiceCompanion/blob/main/LICENSE)
