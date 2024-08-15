@@ -1,0 +1,13 @@
+{
+  "name": "MMM-VoiceCompanion",
+  "version": "1.0.0",
+  "description": "A voice-activated assistant module for MagicMirror²",
+  "main": "MMM-VoiceCompanion.js",
+  "author": "LeonardSEO",
+  "license": "MIT",
+  "dependencies": {
+    "openai": "^4.55.7",
+    "node-microphone": "^0.1.6",
+    "speaker": "^0.5.6"
+  }
+}

@@ -1,0 +1,18 @@
+.voice-companion {
+    font-family: Arial, sans-serif;
+    text-align: left;
+    padding: 10px;
+    background-color: #333;
+    color: #fff;
+    border-radius: 5px;
+}
+
+.voice-companion .status {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.voice-companion .response {
+    font-size: 18px;
+    font-weight: bold;
+}
