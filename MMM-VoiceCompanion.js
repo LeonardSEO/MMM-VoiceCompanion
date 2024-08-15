@@ -1,9 +1,12 @@
 Module.register("MMM-VoiceCompanion", {
     defaults: {
-        wakeWord: "Hey Mirror",
+        wakeWord: "HEY_GOOGLE",
+        porcupineAccessKey: "",
         openAiKey: "",
         language: "en",
-        voiceId: "echo"
+        voiceId: "echo",
+        conversationTimeout: 120000, // 2 minutes
+        standbyTimeout: 30000 // 30 seconds
     },
 
     start: function() {
@@ -11,6 +14,8 @@ Module.register("MMM-VoiceCompanion", {
         this.sendSocketNotification("INIT", this.config);
         this.status = "Waiting for wake word...";
         this.response = "";
+        this.conversationMode = false;
+        this.lastInteractionTime = Date.now();
     },
 
     getDom: function() {
@@ -22,10 +27,15 @@ Module.register("MMM-VoiceCompanion", {
         statusElem.innerText = this.status;
         wrapper.appendChild(statusElem);
 
+        const overlay = document.createElement("div");
+        overlay.className = "voice-overlay " + (this.conversationMode ? "active" : "");
+
         const responseElem = document.createElement("div");
         responseElem.className = "response";
         responseElem.innerText = this.response;
-        wrapper.appendChild(responseElem);
+
+        overlay.appendChild(responseElem);
+        wrapper.appendChild(overlay);
 
         return wrapper;
     },
@@ -47,6 +57,13 @@ Module.register("MMM-VoiceCompanion", {
                 message: payload,
                 timer: 5000
             });
+        } else if (notification === "ENTER_CONVERSATION_MODE") {
+            this.conversationMode = true;
+            this.lastInteractionTime = Date.now();
+            this.updateDom();
+        } else if (notification === "EXIT_CONVERSATION_MODE") {
+            this.conversationMode = false;
+            this.updateDom();
         }
     },
 

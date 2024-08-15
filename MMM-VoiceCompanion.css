@@ -2,9 +2,10 @@
     font-family: Arial, sans-serif;
     text-align: left;
     padding: 10px;
-    background-color: #333;
+    background-color: rgba(0, 0, 0, 0.5);
     color: #fff;
     border-radius: 5px;
+    position: relative;
 }
 
 .voice-companion .status {
@@ -12,7 +13,26 @@
     margin-bottom: 10px;
 }
 
+.voice-companion .voice-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    width: 80%;
+    max-width: 600px;
+}
+
+.voice-companion .voice-overlay.active {
+    opacity: 1;
+}
+
 .voice-companion .response {
-    font-size: 18px;
-    font-weight: bold;
+    font-size: 24px;
+    line-height: 1.4;
 }

@@ -1,17 +1,25 @@
 const NodeHelper = require("node_helper");
 const Log = require("logger");
 const { OpenAI } = require("openai");
-const Microphone = require("node-microphone");
 const fs = require("fs");
 const { Readable } = require("stream");
 const Speaker = require("speaker");
+const {
+  Porcupine,
+  BuiltinKeyword
+} = require("@picovoice/porcupine-node");
+const { PvRecorder } = require("@picovoice/pvrecorder-node");
 
 module.exports = NodeHelper.create({
     start: function() {
         Log.log("Starting node helper for: " + this.name);
         this.openai = null;
+        this.porcupine = null;
+        this.recorder = null;
         this.isListening = false;
-        this.audioBuffer = [];
+        this.conversationMode = false;
+        this.conversationTimeout = null;
+        this.standbyTimeout = null;
     },
 
     socketNotificationReceived: function(notification, payload) {
@@ -19,47 +27,107 @@ module.exports = NodeHelper.create({
         if (notification === "INIT") {
             this.config = payload;
             this.openai = new OpenAI({ apiKey: this.config.openAiKey });
-            this.setupMicrophone();
+            this.setupPorcupine();
         }
     },
 
-    setupMicrophone: function() {
-        const mic = new Microphone();
-        const micStream = mic.startRecording();
+    setupPorcupine: function() {
+        try {
+            this.porcupine = new Porcupine(
+                this.config.porcupineAccessKey,
+                [BuiltinKeyword[this.config.wakeWord]],
+                [0.5]
+            );
 
-        micStream.on("data", (data) => {
-            if (this.isListening) {
-                this.audioBuffer.push(data);
-            }
-        });
+            const frameLength = this.porcupine.frameLength;
+            this.recorder = new PvRecorder(
+                -1, // Default audio device
+                frameLength
+            );
+            this.recorder.start();
 
-        this.isListening = true;
-        this.sendSocketNotification("STATUS_UPDATE", "Listening...");
-        Log.log("MMM-VoiceCompanion: Microphone setup complete");
+            Log.log("MMM-VoiceCompanion: Porcupine and recorder setup complete");
+            this.listenForWakeWord();
+        } catch (error) {
+            Log.error("MMM-VoiceCompanion Error setting up Porcupine:", error);
+        }
     },
 
-    processAudio: async function() {
-        this.isListening = false;
-        const audioBuffer = Buffer.concat(this.audioBuffer);
-        this.audioBuffer = [];
+    listenForWakeWord: async function() {
+        while (true) {
+            const pcm = await this.recorder.read();
+            const keywordIndex = this.porcupine.process(pcm);
 
+            if (keywordIndex !== -1 || this.conversationMode) {
+                Log.log("MMM-VoiceCompanion: Wake word detected or in conversation mode!");
+                this.sendSocketNotification("WAKE_WORD_DETECTED", {});
+                await this.handleSpeechInput();
+            }
+
+            if (this.conversationMode && Date.now() - this.lastInteractionTime > this.config.standbyTimeout) {
+                this.exitConversationMode();
+            }
+        }
+    },
+
+    handleSpeechInput: async function() {
+        if (!this.conversationMode) {
+            this.enterConversationMode();
+        }
+        
+        // Record audio for 5 seconds after wake word
+        const audioBuffer = await this.recordAudio(5000);
+        
         try {
             const transcription = await this.transcribeAudio(audioBuffer);
             Log.log("MMM-VoiceCompanion Transcription:", transcription);
 
-            if (transcription.toLowerCase().includes(this.config.wakeWord.toLowerCase())) {
-                const response = await this.getChatResponse(transcription);
-                Log.log("MMM-VoiceCompanion Assistant response:", response);
+            const response = await this.getChatResponse(transcription);
+            Log.log("MMM-VoiceCompanion Assistant response:", response);
 
-                await this.textToSpeech(response);
-                this.sendSocketNotification("RESPONSE_RECEIVED", response);
-            }
+            await this.textToSpeech(response);
+            this.sendSocketNotification("RESPONSE_RECEIVED", response);
         } catch (error) {
             Log.error("MMM-VoiceCompanion Error processing audio:", error);
         }
 
-        this.isListening = true;
-        this.sendSocketNotification("STATUS_UPDATE", "Listening...");
+        this.resetConversationTimer();
+    },
+
+    enterConversationMode: function() {
+        this.conversationMode = true;
+        this.sendSocketNotification("ENTER_CONVERSATION_MODE", {});
+        this.resetConversationTimer();
+    },
+
+    exitConversationMode: function() {
+        this.conversationMode = false;
+        clearTimeout(this.conversationTimeout);
+        clearTimeout(this.standbyTimeout);
+        this.sendSocketNotification("EXIT_CONVERSATION_MODE", {});
+    },
+
+    resetConversationTimer: function() {
+        clearTimeout(this.conversationTimeout);
+        clearTimeout(this.standbyTimeout);
+        this.lastInteractionTime = Date.now();
+        this.conversationTimeout = setTimeout(() => this.exitConversationMode(), this.config.conversationTimeout);
+        this.standbyTimeout = setTimeout(() => this.exitConversationMode(), this.config.standbyTimeout);
+    },
+
+    recordAudio: function(duration) {
+        return new Promise((resolve) => {
+            const chunks = [];
+            const recordingInterval = setInterval(() => {
+                chunks.push(this.recorder.read());
+            }, 20); // Assuming 20ms frame size
+
+            setTimeout(() => {
+                clearInterval(recordingInterval);
+                const audioBuffer = Buffer.concat(chunks);
+                resolve(audioBuffer);
+            }, duration);
+        });
     },
 
     transcribeAudio: async function(audioBuffer) {

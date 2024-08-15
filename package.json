@@ -1,13 +1,14 @@
 {
   "name": "MMM-VoiceCompanion",
-  "version": "1.0.0",
-  "description": "A voice-activated assistant module for MagicMirror²",
+  "version": "1.0.1",
+  "description": "A voice-activated assistant module for MagicMirror² using Porcupine for wake word detection, OpenAI's Whisper for speech recognition, and GPT for natural language processing",
   "main": "MMM-VoiceCompanion.js",
   "author": "LeonardSEO",
   "license": "MIT",
   "dependencies": {
-    "openai": "^4.55.7",
-    "node-microphone": "^0.1.6",
+    "@picovoice/porcupine-node": "^3.0.0",
+    "@picovoice/pvrecorder-node": "^2.0.0",
+    "openai": "^4.55.6",
     "speaker": "^0.5.6"
   }
 }
