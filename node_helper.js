@@ -2,8 +2,7 @@ const NodeHelper = require("node_helper");
 const Log = require("logger");
 const { OpenAI } = require("openai");
 const fs = require("fs");
-const { Readable } = require("stream");
-const Speaker = require("speaker");
+const { exec } = require('child_process');
 const {
   Porcupine,
   BuiltinKeyword
@@ -153,29 +152,27 @@ module.exports = NodeHelper.create({
     },
 
     textToSpeech: async function(text) {
+        const tempFilePath = "/tmp/tts_output.wav";
+
         const mp3 = await this.openai.audio.speech.create({
             model: "tts-1",
             voice: this.config.voiceId,
             input: text,
-        }, { responseType: "stream" });
-
-        const buffer = Buffer.from(await mp3.arrayBuffer());
-        const readable = new Readable();
-        readable._read = () => {};
-        readable.push(buffer);
-        readable.push(null);
-
-        const speaker = new Speaker({
-            channels: 1,
-            bitDepth: 16,
-            sampleRate: 24000,
         });
 
-        readable.pipe(speaker);
+        const buffer = Buffer.from(await mp3.arrayBuffer());
+        fs.writeFileSync(tempFilePath, buffer);
 
-        return new Promise((resolve) => {
-            speaker.on("close", () => {
-                resolve();
+        return new Promise((resolve, reject) => {
+            exec(`aplay ${tempFilePath}`, (error, stdout, stderr) => {
+                fs.unlinkSync(tempFilePath);
+                if (error) {
+                    console.error(`Error playing audio: ${error}`);
+                    reject(error);
+                } else {
+                    console.log('Audio played successfully');
+                    resolve();
+                }
             });
         });
     }

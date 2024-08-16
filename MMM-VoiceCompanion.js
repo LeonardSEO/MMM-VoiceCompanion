@@ -1,6 +1,6 @@
 Module.register("MMM-VoiceCompanion", {
     defaults: {
-        wakeWord: "HEY_GOOGLE",
+        wakeWord: "PORCUPINE",
         porcupineAccessKey: "",
         openAiKey: "",
         language: "en",
@@ -75,9 +75,6 @@ Module.register("MMM-VoiceCompanion", {
                 message: "Voice assistant is ready. Say '" + this.config.wakeWord + "' to start.",
                 timer: 5000
             });
-        }
-        if (notification === "DOM_OBJECTS_CREATED") {
-            Log.log("MMM-VoiceCompanion: DOM objects created");
         }
     }
 });
