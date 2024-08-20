@@ -25,6 +25,18 @@ module.exports = NodeHelper.create({
         Log.log("MMM-VoiceCompanion helper received a socket notification: " + notification);
         if (notification === "INIT") {
             this.config = payload;
+            Log.log("Received configuration:");
+            Log.log("Wake Word: " + this.config.wakeWord);
+            Log.log("OpenAI Key received: " + (this.config.openAiKey ? "Yes" : "No"));
+            Log.log("Porcupine Access Key received: " + (this.config.porcupineAccessKey ? "Yes" : "No"));
+            
+            if (!this.config.openAiKey) {
+                Log.error("OpenAI API key is missing!");
+            }
+            if (!this.config.porcupineAccessKey) {
+                Log.error("Porcupine Access Key is missing!");
+            }
+            
             this.openai = new OpenAI({ apiKey: this.config.openAiKey });
             this.setupPorcupine();
         }
@@ -39,16 +51,38 @@ module.exports = NodeHelper.create({
             );
 
             const frameLength = this.porcupine.frameLength;
-            this.recorder = new PvRecorder(
-                -1, // Default audio device
-                frameLength
-            );
-            this.recorder.start();
+            
+            // List available audio devices
+            const devices = PvRecorder.getAudioDevices();
+            Log.log("Available audio devices:", devices);
+
+            try {
+                this.recorder = new PvRecorder(
+                    -1, // Default audio device
+                    frameLength
+                );
+                this.recorder.start();
+            } catch (recorderError) {
+                Log.error("Error initializing PvRecorder:", recorderError);
+                Log.log("Trying to use a specific audio device...");
+                
+                // Try to use the first available device
+                if (devices.length > 0) {
+                    this.recorder = new PvRecorder(
+                        0, // First available device
+                        frameLength
+                    );
+                    this.recorder.start();
+                } else {
+                    throw new Error("No audio devices available");
+                }
+            }
 
             Log.log("MMM-VoiceCompanion: Porcupine and recorder setup complete");
             this.listenForWakeWord();
         } catch (error) {
             Log.error("MMM-VoiceCompanion Error setting up Porcupine:", error);
+            this.sendSocketNotification("SETUP_ERROR", error.message);
         }
     },
 

@@ -64,6 +64,14 @@ Module.register("MMM-VoiceCompanion", {
         } else if (notification === "EXIT_CONVERSATION_MODE") {
             this.conversationMode = false;
             this.updateDom();
+        } else if (notification === "SETUP_ERROR") {
+            this.status = "Error: " + payload;
+            this.updateDom();
+            this.sendNotification("SHOW_ALERT", {
+                title: "Voice Companion Error",
+                message: payload,
+                timer: 10000
+            });
         }
     },
 
