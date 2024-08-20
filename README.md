@@ -49,7 +49,6 @@ Before installing this module, make sure you have the following:
    ```javascript
    {
        module: "MMM-VoiceCompanion",
-       position: "top_right",
        config: {
            wakeWord: "HEY_GOOGLE",
            porcupineAccessKey: "your-porcupine-access-key-here",
