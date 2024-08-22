@@ -11,11 +11,11 @@
     "openai": "latest"
   },
   "devDependencies": {
-    "eslint": "^9.9.0",
-    "@eslint/js": "^9.5.0",
-    "globals": "^14.0.1",
+    "eslint": "^8.57.0",
+    "@eslint/js": "^8.57.0",
     "@stylistic/eslint-plugin": "^1.8.1",
-    "eslint-plugin-import": "latest"
+    "eslint-plugin-import": "^2.29.1",
+    "globals": "^14.0.1"
   },
   "scripts": {
     "lint": "eslint .",
