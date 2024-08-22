@@ -109,6 +109,32 @@ Choose one of these values for the `wakeWord` configuration option.
 5. If there's no interaction for the duration specified by `standbyTimeout`, the module will enter standby mode.
 6. To start a new conversation, say the wake word again.
 
+## Update
+
+To update the MMM-VoiceCompanion module to the latest version, follow these steps:
+
+1. Navigate to your MagicMirror's `modules` folder:
+   ```bash
+   cd ~/MagicMirror/modules/MMM-VoiceCompanion
+   ```
+
+2. Pull the latest changes from the repository:
+   ```bash
+   git pull
+   ```
+
+3. Update the module's dependencies:
+   ```bash
+   npm update
+   ```
+
+4. Restart your MagicMirror to apply the updates:
+   ```bash
+   pm2 restart MagicMirror
+   ```
+
+This will ensure your module is up-to-date with the latest features and bug fixes.
+
 ## Troubleshooting
 
 If you encounter any issues:
