@@ -15,7 +15,7 @@
     "@eslint/js": "^8.57.0",
     "@stylistic/eslint-plugin": "^1.8.1",
     "eslint-plugin-import": "^2.29.1",
-    "globals": "^14.0.1"
+    "globals": "^15.9.0"
   },
   "scripts": {
     "lint": "eslint .",
