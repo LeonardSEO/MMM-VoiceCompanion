@@ -1,9 +1,5 @@
 # MMM-VoiceCompanion
-# MMM-VoiceCompanion
-
-<img src="./screenshot-logo.png" alt="MMM-VoiceCompanion Logo" width="250"/>
-
-![MMM-VoiceCompanion Logo](./screenshot-logo.png)
+<img src="./screenshot-logo.png" alt="MMM-VoiceCompanion Logo" width="500"/>
 
 A voice-activated assistant module for MagicMirror² using Porcupine for wake word detection, OpenAI's Whisper for speech recognition, and GPT for natural language processing.
 
