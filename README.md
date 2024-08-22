@@ -1,4 +1,7 @@
 # MMM-VoiceCompanion
+# MMM-VoiceCompanion
+
+<img src="./screenshot-logo.png" alt="MMM-VoiceCompanion Logo" width="250"/>
 
 ![MMM-VoiceCompanion Logo](./screenshot-logo.png)
 
