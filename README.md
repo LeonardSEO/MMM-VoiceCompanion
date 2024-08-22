@@ -135,6 +135,20 @@ To update the MMM-VoiceCompanion module to the latest version, follow these step
 
 This will ensure your module is up-to-date with the latest features and bug fixes.
 
+## Development
+
+This module uses ESLint to ensure code quality. To run the linter:
+
+```bash
+npm run lint
+```
+
+To automatically fix linting issues:
+
+```bash
+npm run lint:fix
+```
+
 ## Troubleshooting
 
 If you encounter any issues:
