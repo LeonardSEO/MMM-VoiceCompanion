@@ -15,7 +15,7 @@ A voice-activated assistant module for MagicMirror² using Porcupine for wake wo
 
 Before installing this module, make sure you have the following:
 
-1. A working installation of [MagicMirror²](https://github.com/MichMich/MagicMirror)
+1. A working installation of [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror)
 2. Node.js version 12 or later
 3. npm (Node Package Manager)
 4. A microphone connected to your MagicMirror device
@@ -132,6 +132,6 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ## Acknowledgements
 
-- [MagicMirror²](https://github.com/MichMich/MagicMirror) for the amazing smart mirror platform
+- [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror) for the amazing smart mirror platform
 - [Picovoice](https://picovoice.ai/) for the Porcupine wake word detection
 - [OpenAI](https://openai.com/) for the powerful GPT and Whisper APIs
