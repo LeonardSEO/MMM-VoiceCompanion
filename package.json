@@ -1,8 +1,22 @@
 {
   "name": "MMM-VoiceCompanion",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A voice-activated assistant module for MagicMirror² using Porcupine for wake word detection, OpenAI's Whisper for speech recognition, and GPT for natural language processing",
   "main": "MMM-VoiceCompanion.js",
+  "author": "LeonardSEO",
+  "license": "MIT",
+  "dependencies": {
+    "@picovoice/porcupine-node": "^3.0.3",
+    "@picovoice/pvrecorder-node": "^1.2.3",
+    "openai": "^4.55.6"
+  },
+  "devDependencies": {
+    "eslint": "^9.9.0"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/LeonardSEO/MMM-VoiceCompanion.git"
@@ -10,19 +24,13 @@
   "keywords": [
     "MagicMirror",
     "voice assistant",
-    "AI",
     "OpenAI",
+    "Whisper",
+    "GPT",
     "Porcupine"
   ],
-  "author": "LeonardSEO",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/LeonardSEO/MMM-VoiceCompanion/issues"
   },
-  "homepage": "https://github.com/LeonardSEO/MMM-VoiceCompanion#readme",
-  "dependencies": {
-    "@picovoice/porcupine-node": "^3.0.3",
-    "@picovoice/pvrecorder-node": "^1.2.3",
-    "openai": "^4.55.6"
-  }
+  "homepage": "https://github.com/LeonardSEO/MMM-VoiceCompanion#readme"
 }
