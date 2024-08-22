@@ -1,6 +1,5 @@
 const globals = require('globals');
 const js = require('@eslint/js');
-const eslintPluginImport = require('eslint-plugin-import');
 const stylisticPlugin = require('@stylistic/eslint-plugin');
 
 const config = [
@@ -21,18 +20,9 @@ const config = [
       }
     },
     plugins: {
-      import: eslintPluginImport,
       '@stylistic': stylisticPlugin
     },
-    settings: {
-      'import/resolver': {
-        node: {
-          extensions: ['.js', '.json']
-        }
-      }
-    },
     rules: {
-      ...eslintPluginImport.configs.recommended.rules,
       ...stylisticPlugin.configs.recommended.rules,
       
       // Custom rules
@@ -43,17 +33,6 @@ const config = [
       'no-var': 'error',
       'object-shorthand': 'error',
       'prefer-template': 'error',
-
-      // Import plugin rules
-      'import/no-unresolved': 'error',
-      'import/named': 'error',
-      'import/default': 'error',
-      'import/namespace': 'error',
-      'import/no-absolute-path': 'error',
-      'import/no-dynamic-require': 'warn',
-      'import/no-webpack-loader-syntax': 'error',
-      'import/no-self-import': 'error',
-      'import/no-useless-path-segments': 'error',
 
       // Stylistic plugin rules
       '@stylistic/indent': ['error', 2],
