@@ -47,14 +47,9 @@ module.exports = NodeHelper.create({
             const sensitivity = 0.7; // Increased sensitivity
             Log.log(`Setting up Porcupine with wake word: ${this.config.wakeWord} and sensitivity: ${sensitivity}`);
 
-            // You might need to adjust these paths based on your project structure
-            const modelFilePath = `${__dirname}/porcupine_params.pv`;
-            const keywordFilePath = `${__dirname}/keywords/${this.config.wakeWord}_raspberry-pi.ppn`;
-
             this.porcupine = new Porcupine(
                 this.config.porcupineAccessKey,
-                modelFilePath,
-                [keywordFilePath],
+                [BuiltinKeyword[this.config.wakeWord]],
                 [sensitivity]
             );
 
