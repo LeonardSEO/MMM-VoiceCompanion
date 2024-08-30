@@ -47,20 +47,20 @@ Before installing this module, make sure you have the following:
    ```
 
 5. Add the module to your `config/config.js` file in the MagicMirror directory:
-   ```javascript
-   {
-       module: "MMM-VoiceCompanion",
-       config: {
-           wakeWord: "HEY_GOOGLE",
-           porcupineAccessKey: "your-porcupine-access-key-here",
-           openAiKey: "your-openai-api-key-here",
-           language: "en",
-           voiceId: "echo",
-           conversationTimeout: 120000,
-           standbyTimeout: 30000
-       }
-   }
-   ```
+```javascript
+{
+    module: "MMM-VoiceCompanion",
+    config: {
+        wakeWord: "HEY_GOOGLE", // of een andere ondersteunde BuiltinKeyword
+        porcupineAccessKey: "YOUR_PORCUPINE_ACCESS_KEY_HERE",
+        openAiKey: "YOUR_OPENAI_KEY_HERE",
+        voiceId: "echo", // of een andere ondersteunde stem-id
+        conversationTimeout: 120000, // 2 minuten
+        standbyTimeout: 30000, // 30 seconden
+        debug: true
+    }
+}
+```
    Replace `"your-porcupine-access-key-here"` and `"your-openai-api-key-here"` with your actual API keys.
 
 6. Restart your MagicMirror:
