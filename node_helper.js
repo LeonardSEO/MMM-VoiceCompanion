@@ -53,7 +53,7 @@ module.exports = NodeHelper.create({
             const frameLength = this.porcupine.frameLength;
             
             // List available audio devices
-            const devices = PvRecorder.getAudioDevices();
+            const devices = PvRecorder.get_available_devices();
             Log.log("Available audio devices:", devices);
 
             try {
