@@ -44,10 +44,18 @@ module.exports = NodeHelper.create({
 
     setupPorcupine: function() {
         try {
+            const sensitivity = 0.7; // Increased sensitivity
+            Log.log(`Setting up Porcupine with wake word: ${this.config.wakeWord} and sensitivity: ${sensitivity}`);
+
+            // You might need to adjust these paths based on your project structure
+            const modelFilePath = `${__dirname}/porcupine_params.pv`;
+            const keywordFilePath = `${__dirname}/keywords/${this.config.wakeWord}_raspberry-pi.ppn`;
+
             this.porcupine = new Porcupine(
                 this.config.porcupineAccessKey,
-                [BuiltinKeyword[this.config.wakeWord]],
-                [0.5]
+                modelFilePath,
+                [keywordFilePath],
+                [sensitivity]
             );
 
             const frameLength = this.porcupine.frameLength;
@@ -84,17 +92,31 @@ module.exports = NodeHelper.create({
 
     listenForWakeWord: async function() {
         while (true) {
-            const pcm = await this.recorder.read();
-            const keywordIndex = this.porcupine.process(pcm);
+            try {
+                const pcm = await this.recorder.read();
+                const keywordIndex = this.porcupine.process(pcm);
 
-            if (keywordIndex !== -1 || this.conversationMode) {
-                Log.log("MMM-VoiceCompanion: Wake word detected or in conversation mode!");
-                this.sendSocketNotification("WAKE_WORD_DETECTED", {});
-                await this.handleSpeechInput();
-            }
+                if (keywordIndex !== -1) {
+                    Log.log(`MMM-VoiceCompanion: Wake word detected! Index: ${keywordIndex}`);
+                    this.sendSocketNotification("WAKE_WORD_DETECTED", {});
+                    await this.handleSpeechInput();
+                } else if (this.conversationMode) {
+                    Log.log("MMM-VoiceCompanion: In conversation mode");
+                    await this.handleSpeechInput();
+                }
 
-            if (this.conversationMode && Date.now() - this.lastInteractionTime > this.config.standbyTimeout) {
-                this.exitConversationMode();
+                // Periodic logging
+                if (Date.now() % 10000 < 20) {
+                    Log.log("MMM-VoiceCompanion: Still listening for wake word...");
+                }
+
+                if (this.conversationMode && Date.now() - this.lastInteractionTime > this.config.standbyTimeout) {
+                    this.exitConversationMode();
+                }
+            } catch (error) {
+                Log.error("Error in listenForWakeWord:", error);
+                // Consider adding a small delay here to prevent tight loop in case of persistent errors
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
     },
