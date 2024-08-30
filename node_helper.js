@@ -53,29 +53,25 @@ module.exports = NodeHelper.create({
             const frameLength = this.porcupine.frameLength;
             
             // List available audio devices
-            const devices = PvRecorder.get_available_devices();
-            Log.log("Available audio devices:", devices);
-
             try {
-                this.recorder = new PvRecorder(
-                    -1, // Default audio device
-                    frameLength
-                );
+                const devices = PvRecorder.getAvailableDevices();
+                if (devices && devices.length > 0) {
+                    Log.log("Available audio devices:", devices);
+                } else {
+                    throw new Error("No audio devices found.");
+                }
+            } catch (deviceError) {
+                Log.error("Error getting audio devices:", deviceError);
+                throw deviceError;
+            }
+
+            // Initialize recorder with the first available audio device
+            try {
+                this.recorder = new PvRecorder(frameLength, 0);
                 this.recorder.start();
             } catch (recorderError) {
                 Log.error("Error initializing PvRecorder:", recorderError);
-                Log.log("Trying to use a specific audio device...");
-                
-                // Try to use the first available device
-                if (devices.length > 0) {
-                    this.recorder = new PvRecorder(
-                        0, // First available device
-                        frameLength
-                    );
-                    this.recorder.start();
-                } else {
-                    throw new Error("No audio devices available");
-                }
+                throw new Error("Failed to initialize the audio recorder.");
             }
 
             Log.log("MMM-VoiceCompanion: Porcupine and recorder setup complete");
