@@ -51,13 +51,15 @@ Before installing this module, make sure you have the following:
 {
     module: "MMM-VoiceCompanion",
     config: {
-        wakeWord: "HEY_GOOGLE", // of een andere ondersteunde BuiltinKeyword
-        porcupineAccessKey: "YOUR_PORCUPINE_ACCESS_KEY_HERE",
-        openAiKey: "YOUR_OPENAI_KEY_HERE",
-        voiceId: "echo", // of een andere ondersteunde stem-id
-        conversationTimeout: 120000, // 2 minuten
-        standbyTimeout: 30000, // 30 seconden
-        debug: true
+        wakeWord: "HEY_GOOGLE",
+        porcupineAccessKey: "YOUR_PORCUPINE_ACCESS_KEY",
+        openAiKey: "YOUR_OPENAI_KEY",
+        voiceId: "echo",
+        conversationTimeout: 120000,
+        standbyTimeout: 30000,
+        audioDeviceIndex: 0,  // Set this to the index of your preferred audio input device
+        silenceThreshold: 1.5,  // Adjust this value to fine-tune silence detection
+        silenceDuration: 30,  // Number of frames of silence to trigger stop recording
     }
 }
 ```
