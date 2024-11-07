@@ -1,13 +1,33 @@
 const NodeHelper = require("node_helper");
 const Log = require("logger");
+const { OpenAI } = require("openai");
+const fs = require("fs");
 const { exec } = require('child_process');
 const {
   Porcupine,
   BuiltinKeyword
 } = require("@picovoice/porcupine-node");
 const { PvRecorder } = require("@picovoice/pvrecorder-node");
-const { OpenAI } = require("openai");
-const fs = require('fs');
+
+const retryWithBackoff = async (operation, maxRetries = 3) => {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await operation();
+        } catch (error) {
+            if (i === maxRetries - 1) throw error;
+            
+            const isRetryableError = 
+                error.message.includes('ECONNRESET') ||
+                error.message.includes('Connection error') ||
+                error.code === 'ETIMEDOUT';
+            
+            if (!isRetryableError) throw error;
+            
+            const delay = Math.pow(2, i) * 1000;
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+};
 
 module.exports = NodeHelper.create({
     start: function() {
@@ -19,16 +39,24 @@ module.exports = NodeHelper.create({
         this.conversationMode = false;
         this.conversationTimeout = null;
         this.standbyTimeout = null;
-        this.state = 'idle';
-        this.backgroundNoiseLevel = 0;
-        this.backgroundNoiseSamples = 0;
-        this.silenceFrames = 0;
     },
 
     socketNotificationReceived: function(notification, payload) {
         Log.log("MMM-VoiceCompanion helper received a socket notification: " + notification);
         if (notification === "INIT") {
             this.config = payload;
+            Log.log("Received configuration:");
+            Log.log("Wake Word: " + this.config.wakeWord);
+            Log.log("OpenAI Key received: " + (this.config.openAiKey ? "Yes" : "No"));
+            Log.log("Porcupine Access Key received: " + (this.config.porcupineAccessKey ? "Yes" : "No"));
+            
+            if (!this.config.openAiKey) {
+                Log.error("OpenAI API key is missing!");
+            }
+            if (!this.config.porcupineAccessKey) {
+                Log.error("Porcupine Access Key is missing!");
+            }
+            
             this.openai = new OpenAI({ apiKey: this.config.openAiKey });
             this.setupPorcupine();
         }
@@ -36,32 +64,39 @@ module.exports = NodeHelper.create({
 
     setupPorcupine: function() {
         try {
-            const sensitivity = 0.7;
-            Log.log(`Setting up Porcupine with wake word: ${this.config.wakeWord} and sensitivity: ${sensitivity}`);
-
             this.porcupine = new Porcupine(
                 this.config.porcupineAccessKey,
                 [BuiltinKeyword[this.config.wakeWord]],
-                [sensitivity]
+                [0.5]
             );
 
             const frameLength = this.porcupine.frameLength;
             
             // List available audio devices
-            const devices = PvRecorder.getAvailableDevices();
+            const devices = PvRecorder.getAudioDevices();
             Log.log("Available audio devices:", devices);
 
-            // Initialize recorder with configurable audio device index
-            const audioDeviceIndex = this.config.audioDeviceIndex || 0;
-            const bufferSizeMSec = 500;
-            this.recorder = new PvRecorder(
-                frameLength,
-                audioDeviceIndex,
-                bufferSizeMSec,
-                false, // logOverflow
-                false  // logSilence
-            );
-            this.recorder.start();
+            try {
+                this.recorder = new PvRecorder(
+                    -1, // Default audio device
+                    frameLength
+                );
+                this.recorder.start();
+            } catch (recorderError) {
+                Log.error("Error initializing PvRecorder:", recorderError);
+                Log.log("Trying to use a specific audio device...");
+                
+                // Try to use the first available device
+                if (devices.length > 0) {
+                    this.recorder = new PvRecorder(
+                        0, // First available device
+                        frameLength
+                    );
+                    this.recorder.start();
+                } else {
+                    throw new Error("No audio devices available");
+                }
+            }
 
             Log.log("MMM-VoiceCompanion: Porcupine and recorder setup complete");
             this.listenForWakeWord();
@@ -72,132 +107,53 @@ module.exports = NodeHelper.create({
     },
 
     listenForWakeWord: async function() {
-        let isInterrupted = false;
-        while (!isInterrupted) {
-            try {
-                const pcm = await this.recorder.read();
-                
-                this.updateBackgroundNoiseLevel(pcm);
-                this.detectSilence(pcm);
+        while (true) {
+            const pcm = await this.recorder.read();
+            const keywordIndex = this.porcupine.process(pcm);
 
-                if (this.state === 'recording' && this.silenceFrames >= this.config.silenceDuration) {
-                    Log.log("Silence detected...");
-                    await this.stopRecording();
-                }
+            if (keywordIndex !== -1 || this.conversationMode) {
+                Log.log("MMM-VoiceCompanion: Wake word detected or in conversation mode!");
+                this.sendSocketNotification("WAKE_WORD_DETECTED", {});
+                await this.handleSpeechInput();
+            }
 
-                const keywordIndex = this.porcupine.process(pcm);
-                if (keywordIndex !== -1) {
-                    Log.info(`Wake word detected: ${this.config.wakeWord}`);
-                    this.sendSocketNotification('WAKE_WORD_DETECTED', {});
-                    await this.startRecording();
-                }
-
-                if (Date.now() % 10000 < 20) {
-                    Log.log("MMM-VoiceCompanion: Still listening for wake word...");
-                }
-
-                if (this.conversationMode && Date.now() - this.lastInteractionTime > this.config.standbyTimeout) {
-                    this.exitConversationMode();
-                }
-            } catch (error) {
-                Log.error("Error in listenForWakeWord:", error);
-                await new Promise(resolve => setTimeout(resolve, 1000));
+            if (this.conversationMode && Date.now() - this.lastInteractionTime > this.config.standbyTimeout) {
+                this.exitConversationMode();
             }
         }
     },
 
-    updateBackgroundNoiseLevel: function(pcm) {
-        const rms = Math.sqrt(pcm.reduce((sum, sample) => sum + sample ** 2, 0) / pcm.length);
-        this.backgroundNoiseLevel = ((this.backgroundNoiseLevel * this.backgroundNoiseSamples) + rms) / (this.backgroundNoiseSamples + 1);
-        this.backgroundNoiseSamples++;
-    },
-
-    detectSilence: function(pcm) {
-        const rms = Math.sqrt(pcm.reduce((sum, sample) => sum + sample ** 2, 0) / pcm.length);
-        const silenceThreshold = this.backgroundNoiseLevel * this.config.silenceThreshold;
-        if (rms < silenceThreshold) {
-            this.silenceFrames++;
-        } else {
-            this.silenceFrames = 0;
+    handleSpeechInput: async function() {
+        if (!this.conversationMode) {
+            this.enterConversationMode();
         }
-    },
-
-    startRecording: async function() {
-        this.state = 'recording';
-        this.sendSocketNotification('START_RECORDING');
-        this.lastInteractionTime = Date.now();
-        this.audio = [];
-    },
-
-    stopRecording: async function() {
-        if (this.state !== 'recording') return;
-
-        this.state = 'processing';
-        this.sendSocketNotification('STOP_RECORDING');
-
-        const audioBuffer = Buffer.from(this.audio);
-        const tempFilePath = '/tmp/audio.wav';
-        fs.writeFileSync(tempFilePath, audioBuffer);
-
+        
         try {
-            const transcription = await this.transcribeAudio(tempFilePath);
-            Log.log("Transcription:", transcription);
-
-            if (transcription) {
-                const response = await this.getChatResponse(transcription);
-                Log.log("Assistant response:", response);
-
-                await this.textToSpeech(response);
-                this.sendSocketNotification("RESPONSE_RECEIVED", response);
+            // Record audio for 5 seconds after wake word
+            const audioBuffer = await this.recordAudio(5000);
+            
+            if (!audioBuffer) {
+                throw new Error("Failed to record audio");
             }
+
+            const transcription = await this.transcribeAudio(audioBuffer);
+            if (!transcription || transcription.trim().length === 0) {
+                throw new Error("No speech detected");
+            }
+
+            Log.log("MMM-VoiceCompanion Transcription:", transcription);
+
+            const response = await this.getChatResponse(transcription);
+            Log.log("MMM-VoiceCompanion Assistant response:", response);
+
+            await this.textToSpeech(response);
+            this.sendSocketNotification("RESPONSE_RECEIVED", response);
         } catch (error) {
-            Log.error("Error processing audio:", error);
+            Log.error("MMM-VoiceCompanion Error processing audio:", error);
+            this.sendSocketNotification("RESPONSE_RECEIVED", "Sorry, I couldn't understand that. Could you please try again?");
         }
 
-        this.state = 'idle';
-        this.audio = [];
-    },
-
-    transcribeAudio: async function(filePath) {
-        const transcription = await this.openai.audio.transcriptions.create({
-            file: fs.createReadStream(filePath),
-            model: "whisper-1",
-        });
-        return transcription.text;
-    },
-
-    getChatResponse: async function(input) {
-        const chatCompletion = await this.openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: input }],
-        });
-        return chatCompletion.choices[0].message.content;
-    },
-
-    textToSpeech: async function(text) {
-        const tempFilePath = '/tmp/tts_output.wav';
-
-        const mp3 = await this.openai.audio.speech.create({
-            model: "tts-1",
-            voice: this.config.voiceId,
-            input: text,
-        });
-
-        const buffer = Buffer.from(await mp3.arrayBuffer());
-        fs.writeFileSync(tempFilePath, buffer);
-
-        return new Promise((resolve, reject) => {
-            exec(`aplay ${tempFilePath}`, (error, stdout, stderr) => {
-                fs.unlinkSync(tempFilePath);
-                if (error) {
-                    Log.error(`Error playing audio: ${error}`);
-                    reject(error);
-                } else {
-                    Log.log('Audio played successfully');
-                    resolve();
-                }
-            });
-        });
+        this.resetConversationTimer();
     },
 
     enterConversationMode: function() {
@@ -219,5 +175,137 @@ module.exports = NodeHelper.create({
         this.lastInteractionTime = Date.now();
         this.conversationTimeout = setTimeout(() => this.exitConversationMode(), this.config.conversationTimeout);
         this.standbyTimeout = setTimeout(() => this.exitConversationMode(), this.config.standbyTimeout);
+    },
+
+    recordAudio: function(duration) {
+        return new Promise((resolve) => {
+            const chunks = [];
+            let silenceFrames = 0;
+            const recordingInterval = setInterval(() => {
+                const frame = this.recorder.read();
+                if (frame && frame.length > 0) {
+                    // Convert Int16Array to Buffer
+                    const frameBuffer = Buffer.from(frame.buffer);
+                    chunks.push(frameBuffer);
+                }
+            }, 20);
+
+            setTimeout(() => {
+                clearInterval(recordingInterval);
+                if (chunks.length === 0) {
+                    Log.error("No audio data recorded");
+                    resolve(null);
+                    return;
+                }
+                
+                // Convert PCM data to WAV format
+                const sampleRate = 16000;
+                const numChannels = 1;
+                const bitsPerSample = 16;
+                
+                // Calculate total samples
+                const totalSamples = chunks.reduce((acc, chunk) => acc + chunk.length / 2, 0);
+                
+                // Create WAV header
+                const header = Buffer.alloc(44);
+                header.write('RIFF', 0);
+                header.writeUInt32LE(36 + totalSamples * 2, 4);
+                header.write('WAVE', 8);
+                header.write('fmt ', 12);
+                header.writeUInt32LE(16, 16);
+                header.writeUInt16LE(1, 20);
+                header.writeUInt16LE(numChannels, 22);
+                header.writeUInt32LE(sampleRate, 24);
+                header.writeUInt32LE(sampleRate * numChannels * bitsPerSample / 8, 28);
+                header.writeUInt16LE(numChannels * bitsPerSample / 8, 32);
+                header.writeUInt16LE(bitsPerSample, 34);
+                header.write('data', 36);
+                header.writeUInt32LE(totalSamples * 2, 40);
+                
+                const audioData = Buffer.concat(chunks);
+                const wavBuffer = Buffer.concat([header, audioData]);
+                
+                resolve(wavBuffer);
+            }, duration);
+        });
+    },
+
+    transcribeAudio: async function(audioBuffer) {
+        if (!audioBuffer) {
+            throw new Error("No audio data to transcribe");
+        }
+
+        const tempFilePath = "/tmp/audio.wav";
+        
+        try {
+            // Write the WAV file
+            fs.writeFileSync(tempFilePath, audioBuffer);
+            
+            // Verify file was written successfully
+            const stats = fs.statSync(tempFilePath);
+            if (stats.size === 0) {
+                throw new Error("Generated audio file is empty");
+            }
+            
+            // Log file info for debugging
+            Log.log(`Audio file size: ${stats.size} bytes`);
+            
+            const transcription = await retryWithBackoff(async () => {
+                const formData = new FormData();
+                formData.append('file', fs.createReadStream(tempFilePath));
+                formData.append('model', 'whisper-1');
+                
+                return await this.openai.audio.transcriptions.create({
+                    file: fs.createReadStream(tempFilePath),
+                    model: "whisper-1",
+                    response_format: "text"
+                });
+            });
+
+            return transcription.text;
+        } catch (error) {
+            Log.error("Transcription error:", error);
+            throw error;
+        } finally {
+            // Clean up temp file
+            if (fs.existsSync(tempFilePath)) {
+                fs.unlinkSync(tempFilePath);
+            }
+        }
+    },
+
+    getChatResponse: async function(input) {
+        const chatCompletion = await this.openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: input }],
+        });
+
+        return chatCompletion.choices[0].message.content;
+    },
+
+    textToSpeech: async function(text) {
+        const tempFilePath = "/tmp/tts_output.wav";
+
+        const mp3 = await this.openai.audio.speech.create({
+            model: "tts-1",
+            voice: this.config.voiceId,
+            input: text,
+        });
+
+        const buffer = Buffer.from(await mp3.arrayBuffer());
+        fs.writeFileSync(tempFilePath, buffer);
+
+        return new Promise((resolve, reject) => {
+            exec(`aplay ${tempFilePath}`, (error, stdout, stderr) => {
+                fs.unlinkSync(tempFilePath);
+                if (error) {
+                    console.error(`Error playing audio: ${error}`);
+                    reject(error);
+                } else {
+                    console.log('Audio played successfully');
+                    resolve();
+                }
+            });
+        });
     }
 });
