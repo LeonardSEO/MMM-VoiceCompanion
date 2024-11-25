@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 Module.register("MMM-VoiceCompanion", {
     defaults: {
         wakeWord: "PORCUPINE",
@@ -174,5 +173,4 @@ Module.register("MMM-VoiceCompanion", {
             });
         }
     }
->>>>>>> bc6291c (Initial commit)
 });
