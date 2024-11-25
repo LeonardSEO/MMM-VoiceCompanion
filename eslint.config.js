@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 const globals = require('globals');
 const js = require('@eslint/js');
 const stylisticPlugin = require('@stylistic/eslint-plugin');
@@ -105,4 +104,3 @@ export default [
     }
   }
 ];
->>>>>>> bc6291c (Initial commit)
